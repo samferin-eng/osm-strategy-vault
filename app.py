@@ -8,15 +8,6 @@ st.title("🐍 Serpentard Strategy Vault PRO")
 
 DATA_FILE = "osm_pro_history.csv"
 
-# Fonctions utilitaires pour la gestion du fichier
-def load_data():
-    if os.path.exists(DATA_FILE):
-        return pd.read_csv(DATA_FILE)
-    return pd.DataFrame(columns=columns)
-
-def save_data(dataframe):
-    dataframe.to_csv(DATA_FILE, index=False)
-
 # Initialisation des colonnes
 columns = [
     "Date", "Mon_Equipe", "Mon_Classement", "Mon_Champ", "Diff_Gen", "Diff_Att", "Diff_Mil", "Diff_Def", "Diff_Gar",
@@ -24,6 +15,14 @@ columns = [
     "Adv_Style", "Adv_Tacles", "Adv_HJ", "Adv_Marquage", "Adv_Camp", "Enjeu", "Mon_Score", "Son_Score", "Resultat", 
     "Tirs_Pour", "Tirs_Contre", "Possession", "Ma_Tactique", "Mon_Style", "Mon_Pres", "Ma_Ment", "Mon_Temp"
 ]
+
+def load_data():
+    if os.path.exists(DATA_FILE):
+        return pd.read_csv(DATA_FILE)
+    return pd.DataFrame(columns=columns)
+
+def save_data(dataframe):
+    dataframe.to_csv(DATA_FILE, index=False)
 
 df = load_data()
 
@@ -75,21 +74,48 @@ def afficher_formulaire_complet(prefix):
 
 # --- ONGLET 1 : CONSEIL ---
 if menu == "🧠 Demander une Tactique":
-    st.header("🧠 Analyseur de Tactique")
+    st.header("🧠 Analyseur de Tactique Intelligent")
     res_search = afficher_formulaire_complet("search")
+    
     if st.button("🔍 TROUVER LA MEILLEURE TACTIQUE"):
         if df.empty:
-            st.warning("Base vide.")
+            st.warning("Ta base de données est vide pour le moment.")
         else:
-            victoires = df[df['Resultat'] == 'Victoire']
-            match_parfait = victoires[(victoires['Adv_Dispo'] == res_search['a_dis']) & (victoires['Type_Coach'] == res_search['adv_co'])]
+            # 1. On ne garde que les victoires contre ce dispositif précis
+            potential_matches = df[(df['Resultat'] == 'Victoire') & (df['Adv_Dispo'] == res_search['a_dis'])]
             
-            if not match_parfait.empty:
-                final = match_parfait.iloc[-1]
-                st.success(f"✅ Victoire trouvée ({final['Mon_Score']}-{final['Son_Score']}) !")
-                st.info(f"**Tactique :** {final['Ma_Tactique']} / {final['Mon_Style']}\n\n**Curseurs :** {final['Mon_Pres']} / {final['Ma_Ment']} / {final['Mon_Temp']}")
+            if potential_matches.empty:
+                st.error(f"Désolé, aucune victoire enregistrée contre un {res_search['a_dis']} dans tes archives.")
             else:
-                st.error("Aucune archive correspondante trouvée contre ce dispositif et ce type de coach.")
+                # 2. On calcule la proximité de l'écart de niveau (Diff_Gen)
+                # Plus la différence entre la Diff_Gen actuelle et l'ancienne est petite, mieux c'est
+                potential_matches = potential_matches.copy()
+                potential_matches['Proximite_Niveau'] = (potential_matches['Diff_Gen'] - res_search['d_gen']).abs()
+                
+                # 3. TRI PRIORITAIRE : 
+                # - D'abord le Type_Coach (Joueur passera avant IA)
+                # - Ensuite la Proximite_Niveau (Le plus proche du niveau actuel d'abord)
+                # On utilise 'ascending=[False, True]' car 'Joueur' est alphabétiquement après 'IA'
+                sorted_matches = potential_matches.sort_values(
+                    by=['Type_Coach', 'Proximite_Niveau'], 
+                    ascending=[False, True]
+                )
+                
+                final = sorted_matches.iloc[0] # On prend le meilleur résultat
+                
+                # Affichage du résultat
+                st.success(f"🏆 Meilleure option trouvée contre un {final['Type_Coach']} !")
+                st.write(f"Match référence : Victoire {final['Mon_Score']}-{final['Son_Score']} contre {final['Adversaire']} (Date: {final['Date']})")
+                
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Tactique", final['Ma_Tactique'])
+                c2.metric("Style", final['Mon_Style'])
+                c3.metric("Ecart Niveau Ref.", f"{final['Diff_Gen']} Gen")
+                
+                st.info(f"⚙️ **PARAMÈTRES :**\n\n**Pressing :** {final['Mon_Pres']} | **Mentalité :** {final['Ma_Ment']} | **Tempo :** {final['Mon_Temp']}")
+                
+                if final['Type_Coach'] != res_search['adv_co']:
+                    st.warning(f"Note : Le résultat affiché est contre un {final['Type_Coach']} car tu n'as pas encore de victoire contre un {res_search['adv_co']} avec ce dispositif.")
 
 # --- ONGLET 2 : ENREGISTREMENT ---
 elif menu == "📝 Enregistrer un Match":
@@ -139,7 +165,6 @@ else:
         st.markdown("---")
         st.subheader("🗑️ Supprimer une erreur")
         
-        # Liste déroulante pour identifier le match à supprimer
         match_list = df.apply(lambda x: f"{x['Date']} - vs {x['Adversaire']} ({x['Resultat']})", axis=1).tolist()
         match_to_delete = st.selectbox("Choisir le match à supprimer", match_list)
         
