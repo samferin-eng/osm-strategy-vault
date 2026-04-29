@@ -153,9 +153,7 @@ elif menu == "📊 Historique":
     else:
         st.info("Aucun match trouvé dans la base de données.")
 
-# --- ONGLET 4 : GUIDE & AIDE ---
-else:
-    st.header("📖 Guide & Aide")
+# --- ONGLET 4 : GUIDE & AIDE (Contenu intégral du PDF) ---
 else:
     st.header("📖 Guide Tactique Complet")
     
@@ -164,6 +162,7 @@ else:
         - **Défensives (4-5-1, 5-3-2, 5-4-1, 6-3-1) :** Priorité à la compacité. Idéales contre plus fort.
         - **Équilibrées (4-4-2B, 4-2-3-1, 3-5-2) :** Flexibilité et contrôle du milieu.
         - **Attaquantes (4-3-3, 3-4-3) :** Présence offensive maximale contre les plus faibles.
+        - **Principe :** Ne jamais forcer une formation hors de son rôle naturel (ex: pas d'attaque agressive en 6-3-1).
         """)
 
     with st.expander("⚽ ÉTAPE 2 & 3 : Plans de jeu & Tactiques de ligne"):
@@ -172,18 +171,31 @@ else:
         - **Défensif :** Contre-attaque, Tir à vue, Longue balle.
         - **Équilibré :** Jeu de passe, Contre-attaque, Tir à vue.
         - **Attaquant :** Jeu d'aile, Jeu de passe.
+        
+        **Tactiques de ligne:**
+        - **Attaque :** Attaque seulement / Milieu de soutien / Chute profonde.
+        - **Milieu :** Pousser en avant / Rester en position / Protéger la défense.
+        - **Défense :** Défense profonde / Milieu de soutien / Arrières offensifs.
         """)
 
     with st.expander("⚙️ ÉTAPE 4 à 6 : Curseurs (Pressing, Style, Tempo)"):
         st.write("""
-        - **Pressing :** Élevé pour l'attaque. Bas pour la défense.
-        - **Tempo :** Haute vitesse contre les faibles. Construction lente contre les forts.
+        - **Pressing :** Élevé pour les plans d'attaque. Bas/Équilibré pour les plans défensifs.
+        - **Style :** Doit correspondre à la formation. Ne jamais jouer défensif avec un 4-3-3.
+        - **Tempo :** Haute vitesse contre les faibles. Lent/Construction pour les formations défensives contre plus fort.
+        - **Règle d'or :** Ne jamais jouer à un rythme élevé contre un meilleur adversaire.
         """)
 
     with st.expander("🛡️ ÉTAPE 7 à 9 : Défense (Tacles, Marquage, Hors-jeu)"):
         st.write("""
-        - **Tacles :** Selon l'arbitre (V=Prudent, R=Agressif).
-        - **Marquage :** Zonal si tu as plus de défenseurs que d'attaquants adverses.
+        - **Tacles :** Ajuster selon l'arbitre. Ne jamais jouer 'Téméraire' avec un arbitre strict.
+        - **Marquage Zonal :** En cas de supériorité numérique (plus de défenseurs que d'attaquants).
+        - **Marquage Individuel :** Si les nombres sont pairs ou pour perturber le rythme.
+        - **Piège Hors-jeu :** Uniquement avec peu de défenseurs (3 ou 4) et pression élevée. À éviter avec 5 ou 6 défenseurs.
         """)
 
-    st.info("🚀 **Le secret du succès :** Analyse tes victoires passées via l'Analyseur de Tactique pour progresser !")
+    st.info("""
+    🚀 **Le secret du succès :** La tactique augmente vos probabilités, mais la chance existe. 
+    Développez votre équipe quotidiennement via les transferts et l'entraînement pour maximiser vos résultats.
+    """)
+    
