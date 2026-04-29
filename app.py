@@ -1,13 +1,17 @@
 import streamlit as st
 import pandas as pd
-from streamlit_gsheets import GSheetsConnection
+import requests
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="🐍 Guide OSM", layout="wide")
 st.title("🐍 Guide OSM")
 
-# Connexion au Google Sheets (utilise le lien dans tes Secrets Streamlit)
-conn = st.connection("gsheets", type=GSheetsConnection)
+# CONFIGURATION GOOGLE FORMS (Tes identifiants intégrés)
+FORM_ID = "1FAIpQLScRz0wdM-3cV95JkKs3X0BCJQkTeel2QJy4MojN0bCueA3JDw"
+ENTRY_ID = "entry.1264469444"
+
+# URL pour lire le Sheets (Format CSV public pour la lecture)
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1rLlCkWvZqwfuMaRjtzDW2ffxzM7AHtEExnMpgyBHlIw/gviz/tq?tqx=out:csv"
 
 # Initialisation des colonnes
 columns = [
@@ -17,10 +21,10 @@ columns = [
     "Tirs_Pour", "Tirs_Contre", "Possession", "Ma_Tactique", "Mon_Style", "Mon_Pres", "Ma_Ment", "Mon_Temp"
 ]
 
-# Chargement des données depuis Google Sheets
+# Chargement des données
 try:
-    df = conn.read(spreadsheet=st.secrets["public_gsheets_url"])
-    df = df.dropna(how="all") # Nettoyage des lignes vides
+    df = pd.read_csv(SHEET_URL)
+    df = df.dropna(how="all")
 except Exception:
     df = pd.DataFrame(columns=columns)
 
@@ -111,24 +115,19 @@ elif menu == "📝 Enregistrer un Match":
     with s6: poss = st.slider("Possession %", 0, 100, 50, key="save_poss")
 
     if st.button("💾 SAUVEGARDER DANS GOOGLE SHEETS"):
-        nouvelle_ligne = {
-            "Date": pd.Timestamp.now().strftime("%d/%m/%Y"), "Mon_Equipe": res_save['mon_e'], "Mon_Classement": res_save['mon_c'],
-            "Mon_Champ": res_save['mon_ch'], "Diff_Gen": res_save['d_gen'], "Diff_Att": res_save['d_att'], "Diff_Mil": res_save['d_mil'],
-            "Diff_Def": res_save['d_def'], "Diff_Gar": res_save['d_gar'], "Mon_Camp": res_save['m_camp'], "Lieu": res_save['lieu'],
-            "Niveau_Stade": res_save['stade'], "Arbitre": res_save['arb'], "Adversaire": res_save['adv_n'], "Type_Coach": res_save['adv_co'],
-            "Son_Classement": res_save['adv_cl'], "Adv_Dispo": res_save['a_dis'], "Adv_Style": res_save['a_sty'],
-            "Adv_Tacles": res_save['a_tac'], "Adv_HJ": res_save['a_hj'], "Adv_Marquage": res_save['a_mar'], "Adv_Camp": res_save['a_camp'],
-            "Enjeu": res_save['enjeu'], "Mon_Score": m_score, "Son_Score": a_score, "Resultat": res_fin, 
-            "Tirs_Pour": t_pour, "Tirs_Contre": t_contre, "Possession": poss,
-            "Ma_Tactique": ma_tac, "Mon_Style": ma_sty, "Mon_Pres": m_pre, "Ma_Ment": m_men, "Mon_Temp": m_tem
-        }
+        # Création de la ligne de données formatée CSV
+        data_line = f"{pd.Timestamp.now().strftime('%d/%m/%Y')},{res_save['mon_e']},{res_save['mon_c']},{res_save['mon_ch']},{res_save['d_gen']},{res_save['d_att']},{res_save['d_mil']},{res_save['d_def']},{res_save['d_gar']},{res_save['m_camp']},{res_save['lieu']},{res_save['stade']},{res_save['arb']},{res_save['adv_n']},{res_save['adv_co']},{res_save['adv_cl']},{res_save['a_dis']},{res_save['a_sty']},{res_save['a_tac']},{res_save['a_hj']},{res_save['a_mar']},{res_save['a_camp']},{res_save['enjeu']},{m_score},{a_score},{res_fin},{t_pour},{t_contre},{poss},{ma_tac},{ma_sty},{m_pre},{m_men},{m_tem}"
         
-        # Mise à jour du DataFrame et envoi vers Google Sheets
-        updated_df = pd.concat([df, pd.DataFrame([nouvelle_ligne])], ignore_index=True)
-        conn.update(spreadsheet=st.secrets["public_gsheets_url"], data=updated_df)
+        # Envoi via Google Forms
+        form_url = f"https://docs.google.com/forms/d/e/{FORM_ID}/formResponse"
+        payload = {ENTRY_ID: data_line}
         
-        st.success("Match enregistré avec succès dans Google Sheets !")
-        st.rerun()
+        try:
+            requests.post(form_url, data=payload)
+            st.success("Match enregistré avec succès !")
+            st.rerun()
+        except Exception as e:
+            st.error(f"Erreur lors de l'enregistrement : {e}")
 
 # --- ONGLET 3 : HISTORIQUE ---
 elif menu == "📊 Historique":
