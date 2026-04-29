@@ -73,17 +73,27 @@ if menu == "🧠 Demander une Tactique":
     res_search = afficher_formulaire_complet("search")
     if st.button("🔍 TROUVER LA MEILLEURE TACTIQUE"):
         if df.empty:
-            st.warning("Base vide.")
+            st.warning("Base de données vide. Enregistrez des matchs d'abord !")
         else:
+            # Filtrage intelligent : on cherche les victoires contre ce dispositif exact
             victoires = df[df['Resultat'] == 'Victoire']
-            match_parfait = victoires[(victoires['Adv_Dispo'] == res_search['a_dis']) & (victoires['Type_Coach'] == res_search['adv_co'])]
+            match_parfait = victoires[
+                (victoires['Adv_Dispo'] == res_search['a_dis']) & 
+                (victoires['Type_Coach'] == res_search['adv_co'])
+            ]
             
             if not match_parfait.empty:
                 final = match_parfait.iloc[-1]
-                st.success(f"✅ Victoire trouvée ({final['Mon_Score']}-{final['Son_Score']}) !")
-                st.info(f"**Tactique :** {final['Ma_Tactique']} / {final['Mon_Style']}\n\n**Curseurs :** {final['Mon_Pres']} / {final['Ma_Ment']} / {final['Mon_Temp']}")
+                st.success(f"✅ Victoire similaire trouvée ({final['Mon_Score']}-{final['Son_Score']}) !")
+                st.info(f"**Dispositif préconisé :** {final['Ma_Tactique']}\n\n**Style :** {final['Mon_Style']}")
+                
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Pressing", final['Mon_Pres'])
+                c2.metric("Mentalité", final['Ma_Ment'])
+                c3.metric("Tempo", final['Mon_Temp'])
             else:
-                st.error("Aucune archive correspondante trouvée contre ce dispositif et ce type de coach.")
+                st.error("Aucun match gagné dans tes archives contre ce dispositif.")
+                st.info("💡 Consulte l'onglet **Guide & Aide** pour une suggestion théorique.")
 
 # --- ONGLET 2 : ENREGISTREMENT ---
 elif menu == "📝 Enregistrer un Match":
@@ -126,10 +136,16 @@ elif menu == "📝 Enregistrer un Match":
 
 # --- ONGLET 3 : HISTORIQUE ---
 elif menu == "📊 Historique":
-    st.header("📊 Historique")
-    st.dataframe(df)
+    st.header("📊 Historique des matchs")
+    if not df.empty:
+        st.dataframe(df, use_container_width=True)
+        # Option pour télécharger son historique
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button("📥 Télécharger l'historique CSV", csv, "mon_historique_osm.csv", "text/csv")
+    else:
+        st.info("L'historique est vide pour le moment.")
 
-# --- ONGLET 4 : GUIDE & AIDE (Contenu intégral du PDF) ---
+# --- ONGLET 4 : GUIDE & AIDE ---
 else:
     st.header("📖 Guide Tactique Complet")
     
@@ -138,7 +154,6 @@ else:
         - **Défensives (4-5-1, 5-3-2, 5-4-1, 6-3-1) :** Priorité à la compacité. Idéales contre plus fort.
         - **Équilibrées (4-4-2B, 4-2-3-1, 3-5-2) :** Flexibilité et contrôle du milieu.
         - **Attaquantes (4-3-3, 3-4-3) :** Présence offensive maximale contre les plus faibles.
-        - **Principe :** Ne jamais forcer une formation hors de son rôle naturel (ex: pas d'attaque agressive en 6-3-1).
         """)
 
     with st.expander("⚽ ÉTAPE 2 & 3 : Plans de jeu & Tactiques de ligne"):
@@ -147,31 +162,18 @@ else:
         - **Défensif :** Contre-attaque, Tir à vue, Longue balle.
         - **Équilibré :** Jeu de passe, Contre-attaque, Tir à vue.
         - **Attaquant :** Jeu d'aile, Jeu de passe.
-        
-        **Tactiques de ligne:**
-        - **Attaque :** Attaque seulement / Milieu de soutien / Chute profonde.
-        - **Milieu :** Pousser en avant / Rester en position / Protéger la défense.
-        - **Défense :** Défense profonde / Milieu de soutien / Arrières offensifs.
         """)
 
     with st.expander("⚙️ ÉTAPE 4 à 6 : Curseurs (Pressing, Style, Tempo)"):
         st.write("""
-        - **Pressing :** Élevé pour les plans d'attaque. Bas/Équilibré pour les plans défensifs.
-        - **Style :** Doit correspondre à la formation. Ne jamais jouer défensif avec un 4-3-3.
-        - **Tempo :** Haute vitesse contre les faibles. Lent/Construction pour les formations défensives contre plus fort.
-        - **Règle d'or :** Ne jamais jouer à un rythme élevé contre un meilleur adversaire.
+        - **Pressing :** Élevé pour l'attaque. Bas pour la défense.
+        - **Tempo :** Haute vitesse contre les faibles. Construction lente contre les forts.
         """)
 
     with st.expander("🛡️ ÉTAPE 7 à 9 : Défense (Tacles, Marquage, Hors-jeu)"):
         st.write("""
-        - **Tacles :** Ajuster selon l'arbitre. Ne jamais jouer 'Téméraire' avec un arbitre strict.
-        - **Marquage Zonal :** En cas de supériorité numérique (plus de défenseurs que d'attaquants).
-        - **Marquage Individuel :** Si les nombres sont pairs ou pour perturber le rythme.
-        - **Piège Hors-jeu :** Uniquement avec peu de défenseurs (3 ou 4) et pression élevée. À éviter avec 5 ou 6 défenseurs.
+        - **Tacles :** Selon l'arbitre (V=Prudent, R=Agressif).
+        - **Marquage :** Zonal si tu as plus de défenseurs que d'attaquants adverses.
         """)
 
-    st.info("""
-    🚀 **Le secret du succès :** La tactique augmente vos probabilités, mais la chance existe. 
-    Développez votre équipe quotidiennement via les transferts et l'entraînement pour maximiser vos résultats.
-    """)
-    
+    st.info("🚀 **Le secret du succès :** Analyse tes victoires passées via l'Analyseur de Tactique pour progresser !")
