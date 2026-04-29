@@ -1,14 +1,24 @@
 import streamlit as st
 import pandas as pd
-import os
+import requests
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="🐍 Guide OSM", layout="wide")
 st.title("🐍 Guide OSM")
 
-DATA_FILE = "osm_pro_history.csv"
+# IDENTIFIANTS QUE TU AS FOURNIS
+FORM_ID = "1FAIpQLScRz0wdM-3cV95JkKs3X0BCJQkTeel2QJy4MojN0bCueA3JDw"
+ENTRY_ID = "entry.1264469444"
 
-# Initialisation des colonnes
+# CONFIGURATION DU SHEETS
+SHEET_ID = "1rLlCkWvZqwfuMaRjtzDW2ffxzM7AHtEExnMpgyBHlIw"
+# Si ça ne marche pas, vérifie si l'onglet ne s'appelle pas "Feuille 1" ou "Form Responses 1"
+NOM_ONGLET = "Réponses au formulaire 1" 
+
+# URL de lecture publique (Format CSV)
+SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={NOM_ONGLET.replace(' ', '%20')}"
+
+# Structure des colonnes (34 colonnes au total)
 columns = [
     "Date", "Mon_Equipe", "Mon_Classement", "Mon_Champ", "Diff_Gen", "Diff_Att", "Diff_Mil", "Diff_Def", "Diff_Gar",
     "Mon_Camp", "Lieu", "Niveau_Stade", "Arbitre", "Adversaire", "Type_Coach", "Son_Classement", "Adv_Dispo",
@@ -16,13 +26,34 @@ columns = [
     "Tirs_Pour", "Tirs_Contre", "Possession", "Ma_Tactique", "Mon_Style", "Mon_Pres", "Ma_Ment", "Mon_Temp"
 ]
 
-if os.path.exists(DATA_FILE):
-    df = pd.read_csv(DATA_FILE)
-else:
+# --- CHARGEMENT & NETTOYAGE ---
+try:
+    # On tente de lire le CSV
+    raw_df = pd.read_csv(SHEET_URL)
+    
+    # Google Forms met l'horodatage en colonne A, et ta donnée compactée en colonne B
+    # On prend donc la dernière colonne du tableau
+    data_column = raw_df.iloc[:, -1] 
+    
+    clean_data = []
+    for row in data_column.dropna():
+        parts = str(row).split(',')
+        # On vérifie que la ligne est complète (34 éléments)
+        if len(parts) == len(columns):
+            clean_data.append(parts)
+    
+    df = pd.DataFrame(clean_data, columns=columns)
+    
+    # Nettoyage des types de données pour la recherche
+    df["Mon_Score"] = pd.to_numeric(df["Mon_Score"], errors='coerce')
+    df["Son_Score"] = pd.to_numeric(df["Son_Score"], errors='coerce')
+
+except Exception as e:
+    # Si le chargement échoue (ex: fichier non publié), on crée un tableau vide avec les colonnes
     df = pd.DataFrame(columns=columns)
 
-# Ajout de l'option "Guide & Aide" dans le menu
-menu = st.sidebar.radio("Navigation", ["🧠 Demander une Tactique", "📝 Enregistrer un Match", "📊 Historique", "📖 Guide & Aide"], key="main_menu")
+# MENU
+menu = st.sidebar.radio("Navigation", ["🧠 Demander une Tactique", "📝 Enregistrer un Match", "📊 Historique", "📖 Guide & Aide"])
 
 def afficher_formulaire_complet(prefix):
     st.subheader("1. Contexte & Niveaux")
@@ -51,7 +82,7 @@ def afficher_formulaire_complet(prefix):
         adv_co = st.selectbox("Coach Joueur ou IA", ["Joueur", "IA"], key=f"{prefix}_ac")
         adv_cl = st.number_input("Son classement", 1, 20, key=f"{prefix}_acl")
     with f6:
-        a_dis = st.text_input("Son dispositif", key=f"{prefix}_ad")
+        a_dis = st.text_input("Son dispositif (ex: 442A)", key=f"{prefix}_ad")
         a_sty = st.text_input("Son style de jeu", key=f"{prefix}_as")
         a_tac = st.selectbox("Ses tacles", ["Prudent", "Normal", "Agressif", "Extrême"], key=f"{prefix}_at")
         a_hj = st.selectbox("Joue-t-il le hors-jeu ?", ["Non", "Oui"], key=f"{prefix}_ah")
@@ -73,105 +104,58 @@ if menu == "🧠 Demander une Tactique":
     res_search = afficher_formulaire_complet("search")
     if st.button("🔍 TROUVER LA MEILLEURE TACTIQUE"):
         if df.empty:
-            st.warning("Base vide.")
+            st.warning("Aucune donnée disponible. Connecte ton Sheets et enregistre un match.")
         else:
-            victoires = df[df['Resultat'] == 'Victoire']
-            match_parfait = victoires[(victoires['Adv_Dispo'] == res_search['a_dis']) & (victoires['Type_Coach'] == res_search['adv_co'])]
-            
+            match_parfait = df[(df['Adv_Dispo'] == res_search['a_dis']) & (df['Resultat'] == 'Victoire')]
             if not match_parfait.empty:
                 final = match_parfait.iloc[-1]
-                st.success(f"✅ Victoire trouvée ({final['Mon_Score']}-{final['Son_Score']}) !")
-                st.info(f"**Tactique :** {final['Ma_Tactique']} / {final['Mon_Style']}\n\n**Curseurs :** {final['Mon_Pres']} / {final['Ma_Ment']} / {final['Mon_Temp']}")
+                st.success(f"✅ Victoire trouvée !")
+                st.write(f"**Ma Tactique :** {final['Ma_Tactique']} ({final['Mon_Style']})")
+                st.write(f"**Curseurs :** {final['Mon_Pres']} / {final['Ma_Ment']} / {final['Mon_Temp']}")
             else:
-                st.error("Aucune archive correspondante trouvée contre ce dispositif et ce type de coach.")
+                st.error("Aucune victoire enregistrée contre ce dispositif.")
 
 # --- ONGLET 2 : ENREGISTREMENT ---
 elif menu == "📝 Enregistrer un Match":
-    st.header("📝 Rapport de Match Complet")
+    st.header("📝 Rapport de Match")
     res_save = afficher_formulaire_complet("save")
     
-    st.subheader("3. Ma Tactique utilisée")
+    st.subheader("3. Ma Tactique & Résultat")
     t1, t2, t3, t4, t5 = st.columns(5)
-    with t1: ma_tac = st.text_input("Dispositif (ex: 433B)", key="save_ma_tac")
-    with t2: ma_sty = st.text_input("Style (ex: Ailes)", key="save_ma_sty")
-    with t3: m_pre = st.number_input("Pressing", 0, 99, 50, key="save_m_pre")
-    with t4: m_men = st.number_input("Mentalité", 0, 99, 50, key="save_m_men")
-    with t5: m_tem = st.number_input("Tempo", 0, 99, 50, key="save_m_tem")
+    with t1: ma_tac = st.text_input("Dispositif", key="save_ma_tac")
+    with t2: ma_sty = st.text_input("Style", key="save_ma_sty")
+    with t3: m_pre = st.number_input("Pressing", 0, 99, 50)
+    with t4: m_men = st.number_input("Mentalité", 0, 99, 50)
+    with t5: m_tem = st.number_input("Tempo", 0, 99, 50)
 
-    st.subheader("4. Statistiques & Score Final")
     s1, s2, s3, s4, s5, s6 = st.columns(6)
-    with s1: m_score = st.number_input("Mon Score", 0, 20, 0, key="save_m_score")
-    with s2: a_score = st.number_input("Son Score", 0, 20, 0, key="save_a_score")
-    with s3: res_fin = st.selectbox("Résultat final", ["Victoire", "Nul", "Défaite"], key="save_res")
-    with s4: t_pour = st.number_input("Mes tirs", 0, 50, 0, key="save_tp")
-    with s5: t_contre = st.number_input("Ses tirs", 0, 50, 0, key="save_tc")
-    with s6: poss = st.slider("Possession %", 0, 100, 50, key="save_poss")
+    with s1: m_score = st.number_input("Mon Score", 0, 20)
+    with s2: a_score = st.number_input("Son Score", 0, 20)
+    with s3: res_fin = st.selectbox("Résultat", ["Victoire", "Nul", "Défaite"])
+    with s4: tp = st.number_input("Mes tirs", 0, 50)
+    with s5: tc = st.number_input("Ses tirs", 0, 50)
+    with s6: po = st.slider("Possession", 0, 100, 50)
 
-    if st.button("💾 SAUVEGARDER DANS LA MÉMOIRE"):
-        nouvelle_ligne = {
-            "Date": pd.Timestamp.now().strftime("%d/%m/%Y"), "Mon_Equipe": res_save['mon_e'], "Mon_Classement": res_save['mon_c'],
-            "Mon_Champ": res_save['mon_ch'], "Diff_Gen": res_save['d_gen'], "Diff_Att": res_save['d_att'], "Diff_Mil": res_save['d_mil'],
-            "Diff_Def": res_save['d_def'], "Diff_Gar": res_save['d_gar'], "Mon_Camp": res_save['m_camp'], "Lieu": res_save['lieu'],
-            "Niveau_Stade": res_save['stade'], "Arbitre": res_save['arb'], "Adversaire": res_save['adv_n'], "Type_Coach": res_save['adv_co'],
-            "Son_Classement": res_save['adv_cl'], "Adv_Dispo": res_save['a_dis'], "Adv_Style": res_save['a_sty'],
-            "Adv_Tacles": res_save['a_tac'], "Adv_HJ": res_save['a_hj'], "Adv_Marquage": res_save['a_mar'], "Adv_Camp": res_save['a_camp'],
-            "Enjeu": res_save['enjeu'], "Mon_Score": m_score, "Son_Score": a_score, "Resultat": res_fin, 
-            "Tirs_Pour": t_pour, "Tirs_Contre": t_contre, "Possession": poss,
-            "Ma_Tactique": ma_tac, "Mon_Style": ma_sty, "Mon_Pres": m_pre, "Ma_Ment": m_men, "Mon_Temp": m_tem
-        }
-        df = pd.concat([df, pd.DataFrame([nouvelle_ligne])], ignore_index=True)
-        df.to_csv(DATA_FILE, index=False)
-        st.success(f"Match enregistré avec succès !")
-        st.rerun()
+    if st.button("💾 ENREGISTRER DÉFINITIVEMENT"):
+        # Construction de la ligne CSV
+        data_line = f"{pd.Timestamp.now().strftime('%d/%m/%Y')},{res_save['mon_e']},{res_save['mon_c']},{res_save['mon_ch']},{res_save['d_gen']},{res_save['d_att']},{res_save['d_mil']},{res_save['d_def']},{res_save['d_gar']},{res_save['m_camp']},{res_save['lieu']},{res_save['stade']},{res_save['arb']},{res_save['adv_n']},{res_save['adv_co']},{res_save['adv_cl']},{res_save['a_dis']},{res_save['a_sty']},{res_save['a_tac']},{res_save['a_hj']},{res_save['a_mar']},{res_save['a_camp']},{res_save['enjeu']},{m_score},{a_score},{res_fin},{tp},{tc},{po},{ma_tac},{ma_sty},{m_pre},{m_men},{m_tem}"
+        
+        try:
+            requests.post(f"https://docs.google.com/forms/d/e/{FORM_ID}/formResponse", data={ENTRY_ID: data_line})
+            st.success("Match enregistré ! Actualise l'historique dans quelques secondes.")
+            st.rerun()
+        except:
+            st.error("Erreur de connexion au formulaire.")
 
 # --- ONGLET 3 : HISTORIQUE ---
 elif menu == "📊 Historique":
     st.header("📊 Historique")
-    st.dataframe(df)
+    if df.empty:
+        st.info("L'historique est vide ou le Sheets n'est pas 'Publié sur le web'.")
+    else:
+        st.dataframe(df)
 
-# --- ONGLET 4 : GUIDE & AIDE (Contenu intégral du PDF) ---
-else:
-    st.header("📖 Guide Tactique Complet")
-    
-    with st.expander("📌 ÉTAPE 1 : Les Formations", expanded=True):
-        st.write("""
-        - **Défensives (4-5-1, 5-3-2, 5-4-1, 6-3-1) :** Priorité à la compacité. Idéales contre plus fort.
-        - **Équilibrées (4-4-2B, 4-2-3-1, 3-5-2) :** Flexibilité et contrôle du milieu.
-        - **Attaquantes (4-3-3, 3-4-3) :** Présence offensive maximale contre les plus faibles.
-        - **Principe :** Ne jamais forcer une formation hors de son rôle naturel (ex: pas d'attaque agressive en 6-3-1).
-        """)
-
-    with st.expander("⚽ ÉTAPE 2 & 3 : Plans de jeu & Tactiques de ligne"):
-        st.write("""
-        **Plans de jeu compatibles:**
-        - **Défensif :** Contre-attaque, Tir à vue, Longue balle.
-        - **Équilibré :** Jeu de passe, Contre-attaque, Tir à vue.
-        - **Attaquant :** Jeu d'aile, Jeu de passe.
-        
-        **Tactiques de ligne:**
-        - **Attaque :** Attaque seulement / Milieu de soutien / Chute profonde.
-        - **Milieu :** Pousser en avant / Rester en position / Protéger la défense.
-        - **Défense :** Défense profonde / Milieu de soutien / Arrières offensifs.
-        """)
-
-    with st.expander("⚙️ ÉTAPE 4 à 6 : Curseurs (Pressing, Style, Tempo)"):
-        st.write("""
-        - **Pressing :** Élevé pour les plans d'attaque. Bas/Équilibré pour les plans défensifs.
-        - **Style :** Doit correspondre à la formation. Ne jamais jouer défensif avec un 4-3-3.
-        - **Tempo :** Haute vitesse contre les faibles. Lent/Construction pour les formations défensives contre plus fort.
-        - **Règle d'or :** Ne jamais jouer à un rythme élevé contre un meilleur adversaire.
-        """)
-
-    with st.expander("🛡️ ÉTAPE 7 à 9 : Défense (Tacles, Marquage, Hors-jeu)"):
-        st.write("""
-        - **Tacles :** Ajuster selon l'arbitre. Ne jamais jouer 'Téméraire' avec un arbitre strict.
-        - **Marquage Zonal :** En cas de supériorité numérique (plus de défenseurs que d'attaquants).
-        - **Marquage Individuel :** Si les nombres sont pairs ou pour perturber le rythme.
-        - **Piège Hors-jeu :** Uniquement avec peu de défenseurs (3 ou 4) et pression élevée. À éviter avec 5 ou 6 défenseurs.
-        """)
-
-    st.info("""
-    🚀 **Le secret du succès :** La tactique augmente vos probabilités, mais la chance existe. 
-    Développez votre équipe quotidiennement via les transferts et l'entraînement pour maximiser vos résultats.
-    """)
-    
+# --- ONGLET 4 : GUIDE ---
+elif menu == "📖 Guide & Aide":
+    st.header("📖 Guide")
+    st.write("Utilise les expanders pour voir les conseils tactiques.")
