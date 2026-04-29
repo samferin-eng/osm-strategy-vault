@@ -1,18 +1,17 @@
 import streamlit as st
 import pandas as pd
-import requests
+import os
+import requests # Ajouté pour l'envoi Google Forms
+import io       # Ajouté pour la lecture Google Sheets
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="🐍 Guide OSM", layout="wide")
 st.title("🐍 Guide OSM")
 
-# --- PARAMÈTRES GOOGLE (À VÉRIFIER) ---
+# CONFIGURATION GOOGLE (Tes identifiants)
 FORM_ID = "1FAIpQLScRz0wdM-3cV95JkKs3X0BCJQkTeel2QJy4MojN0bCueA3JDw"
-ENTRY_ID = "entry.1264469444" # C'est l'ID de la question dans ton formulaire
+ENTRY_ID = "entry.1264469444"
 SHEET_ID = "1rLlCkWvZqwfuMaRjtzDW2ffxzM7AHtEExnMpgyBHlIw"
-
-# URL de lecture (Assure-toi que le Sheets est "Publié sur le web" en format CSV)
-CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/pub?output=csv"
 
 # Initialisation des colonnes
 columns = [
@@ -22,28 +21,30 @@ columns = [
     "Tirs_Pour", "Tirs_Contre", "Possession", "Ma_Tactique", "Mon_Style", "Mon_Pres", "Ma_Ment", "Mon_Temp"
 ]
 
-# --- CHARGEMENT DES DONNÉES ---
+# --- FONCTION DE LECTURE GOOGLE SHEETS ---
 @st.cache_data(ttl=10)
-def load_history():
+def load_data():
     try:
-        # On lit le Sheets public
-        raw_df = pd.read_csv(CSV_URL)
-        # On récupère la dernière colonne qui contient nos données compactées
-        data_col = raw_df.iloc[:, -1]
+        # Lecture du Sheets publié au format CSV
+        url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/pub?output=csv"
+        response = requests.get(url)
+        raw_df = pd.read_csv(io.StringIO(response.text))
         
-        clean_rows = []
+        # Dépliage de la colonne compactée (dernière colonne du Sheets)
+        data_col = raw_df.iloc[:, -1]
+        rows = []
         for val in data_col.dropna():
             parts = str(val).split(',')
-            if len(parts) >= 30: # Sécurité pour ne prendre que les lignes de match
-                clean_rows.append(parts[:34])
-        
-        return pd.DataFrame(clean_rows, columns=columns)
+            if len(parts) >= 30:
+                rows.append(parts[:34])
+        return pd.DataFrame(rows, columns=columns)
     except:
         return pd.DataFrame(columns=columns)
 
-df = load_history()
+# Chargement du DF depuis Google au lieu du CSV local
+df = load_data()
 
-# --- MENU ---
+# Ajout de l'option "Guide & Aide" dans le menu
 menu = st.sidebar.radio("Navigation", ["🧠 Demander une Tactique", "📝 Enregistrer un Match", "📊 Historique", "📖 Guide & Aide"], key="main_menu")
 
 def afficher_formulaire_complet(prefix):
@@ -95,15 +96,20 @@ if menu == "🧠 Demander une Tactique":
     res_search = afficher_formulaire_complet("search")
     if st.button("🔍 TROUVER LA MEILLEURE TACTIQUE"):
         if df.empty:
-            st.warning("Ta base de données est vide ou mal connectée.")
+            st.warning("Base vide.")
         else:
-            match_parfait = df[(df['Adv_Dispo'] == res_search['a_dis']) & (df['Resultat'] == 'Victoire')]
+            # Conversion en numérique pour filtrer proprement
+            df["Mon_Score"] = pd.to_numeric(df["Mon_Score"], errors='coerce')
+            df["Son_Score"] = pd.to_numeric(df["Son_Score"], errors='coerce')
+            victoires = df[df['Resultat'] == 'Victoire']
+            match_parfait = victoires[(victoires['Adv_Dispo'] == res_search['a_dis']) & (victoires['Type_Coach'] == res_search['adv_co'])]
+            
             if not match_parfait.empty:
                 final = match_parfait.iloc[-1]
-                st.success(f"✅ Victoire trouvée !")
+                st.success(f"✅ Victoire trouvée ({final['Mon_Score']}-{final['Son_Score']}) !")
                 st.info(f"**Tactique :** {final['Ma_Tactique']} / {final['Mon_Style']}\n\n**Curseurs :** {final['Mon_Pres']} / {final['Ma_Ment']} / {final['Mon_Temp']}")
             else:
-                st.error("Aucune archive correspondante trouvée contre ce dispositif.")
+                st.error("Aucune archive correspondante trouvée contre ce dispositif et ce type de coach.")
 
 # --- ONGLET 2 : ENREGISTREMENT ---
 elif menu == "📝 Enregistrer un Match":
@@ -114,46 +120,51 @@ elif menu == "📝 Enregistrer un Match":
     t1, t2, t3, t4, t5 = st.columns(5)
     with t1: ma_tac = st.text_input("Dispositif (ex: 433B)", key="save_ma_tac")
     with t2: ma_sty = st.text_input("Style (ex: Ailes)", key="save_ma_sty")
-    with t3: m_pre = st.number_input("Pressing", 0, 99, 50)
-    with t4: m_men = st.number_input("Mentalité", 0, 99, 50)
-    with t5: m_tem = st.number_input("Tempo", 0, 99, 50)
+    with t3: m_pre = st.number_input("Pressing", 0, 99, 50, key="save_m_pre")
+    with t4: m_men = st.number_input("Mentalité", 0, 99, 50, key="save_m_men")
+    with t5: m_tem = st.number_input("Tempo", 0, 99, 50, key="save_m_tem")
 
     st.subheader("4. Statistiques & Score Final")
     s1, s2, s3, s4, s5, s6 = st.columns(6)
-    with s1: m_score = st.number_input("Mon Score", 0, 20)
-    with s2: a_score = st.number_input("Son Score", 0, 20)
-    with s3: res_fin = st.selectbox("Résultat final", ["Victoire", "Nul", "Défaite"])
-    with s4: t_pour = st.number_input("Mes tirs", 0, 50)
-    with s5: t_contre = st.number_input("Ses tirs", 0, 50)
-    with s6: poss = st.slider("Possession %", 0, 100, 50)
+    with s1: m_score = st.number_input("Mon Score", 0, 20, 0, key="save_m_score")
+    with s2: a_score = st.number_input("Son Score", 0, 20, 0, key="save_a_score")
+    with s3: res_fin = st.selectbox("Résultat final", ["Victoire", "Nul", "Défaite"], key="save_res")
+    with s4: t_pour = st.number_input("Mes tirs", 0, 50, 0, key="save_tp")
+    with s5: t_contre = st.number_input("Ses tirs", 0, 50, 0, key="save_tc")
+    with s6: poss = st.slider("Possession %", 0, 100, 50, key="save_poss")
 
     if st.button("💾 SAUVEGARDER DANS GOOGLE SHEETS"):
-        # On crée la ligne CSV compactée
-        data_line = f"{pd.Timestamp.now().strftime('%d/%m/%Y')},{res_save['mon_e']},{res_save['mon_c']},{res_save['mon_ch']},{res_save['d_gen']},{res_save['d_att']},{res_save['d_mil']},{res_save['d_def']},{res_save['d_gar']},{res_save['m_camp']},{res_save['lieu']},{res_save['stade']},{res_save['arb']},{res_save['adv_n']},{res_save['adv_co']},{res_save['adv_cl']},{res_save['a_dis']},{res_save['a_sty']},{res_save['a_tac']},{res_save['a_hj']},{res_save['a_mar']},{res_save['a_camp']},{res_save['enjeu']},{m_score},{a_score},{res_fin},{t_pour},{t_contre},{poss},{ma_tac},{ma_sty},{m_pre},{m_men},{m_tem}"
+        # Préparation de la ligne compactée
+        data_list = [
+            pd.Timestamp.now().strftime("%d/%m/%Y"), res_save['mon_e'], res_save['mon_c'], res_save['mon_ch'],
+            res_save['d_gen'], res_save['d_att'], res_save['d_mil'], res_save['d_def'], res_save['d_gar'],
+            res_save['m_camp'], res_save['lieu'], res_save['stade'], res_save['arb'], res_save['adv_n'],
+            res_save['adv_co'], res_save['adv_cl'], res_save['a_dis'], res_save['a_sty'], res_save['a_tac'],
+            res_save['a_hj'], res_save['a_mar'], res_save['a_camp'], res_save['enjeu'],
+            m_score, a_score, res_fin, t_pour, t_contre, poss,
+            ma_tac, ma_sty, m_pre, m_men, m_tem
+        ]
+        line_str = ",".join(map(str, data_list))
         
-        # Envoi vers Google Forms
-        url = f"https://docs.google.com/forms/d/e/{FORM_ID}/formResponse"
-        payload = {ENTRY_ID: data_line}
-        
+        # Envoi via Google Forms
         try:
-            response = requests.post(url, data=payload)
-            st.success("✅ Match envoyé avec succès ! Il apparaîtra dans l'historique d'ici quelques secondes.")
-            st.cache_data.clear() # On vide le cache pour forcer la lecture du nouveau match
+            url_form = f"https://docs.google.com/forms/d/e/{FORM_ID}/formResponse"
+            requests.post(url_form, data={ENTRY_ID: line_str})
+            st.success(f"Match enregistré avec succès dans Google Sheets !")
+            st.cache_data.clear() # Force le rafraîchissement de l'historique
+            st.rerun()
         except:
-            st.error("❌ Erreur lors de l'envoi vers Google Sheets.")
+            st.error("Erreur de connexion lors de l'enregistrement.")
 
 # --- ONGLET 3 : HISTORIQUE ---
 elif menu == "📊 Historique":
-    st.header("📊 Historique des matchs")
-    if df.empty:
-        st.info("L'historique est vide. Vérifie que ton Sheets est 'Publié sur le web' au format CSV.")
-    else:
-        st.dataframe(df)
+    st.header("📊 Historique")
+    st.dataframe(df)
 
-# --- ONGLET 4 : GUIDE ---
+# --- ONGLET 4 : GUIDE & AIDE ---
 else:
     st.header("📖 Guide Tactique Complet")
-
+    
     with st.expander("📌 ÉTAPE 1 : Les Formations", expanded=True):
         st.write("""
         - **Défensives (4-5-1, 5-3-2, 5-4-1, 6-3-1) :** Priorité à la compacité. Idéales contre plus fort.
@@ -195,4 +206,3 @@ else:
     🚀 **Le secret du succès :** La tactique augmente vos probabilités, mais la chance existe. 
     Développez votre équipe quotidiennement via les transferts et l'entraînement pour maximiser vos résultats.
     """)
-    
