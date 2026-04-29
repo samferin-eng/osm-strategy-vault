@@ -8,8 +8,8 @@ from supabase import create_client
 st.set_page_config(page_title="🐍 Guide OSM", layout="wide")
 st.title("🐍 Guide OSM - Pro Version")
 
-url = "TON_SUPABASE_URL"
-key = "TON_SUPABASE_ANON_KEY"
+url = "https://rbzsbemgcuonwvihuwny.supabase.co"
+key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJienNiZW1nY3Vvbnd2aWh1d255Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0ODUzMTMsImV4cCI6MjA5MzA2MTMxM30.-wsKYzQDCTPhNR37fM4RivwR_nGSyf83tBmGmOi_WPE"
 
 supabase = create_client(url, key)
 
