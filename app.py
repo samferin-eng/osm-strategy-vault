@@ -19,8 +19,6 @@ def load_data():
 
 df_supabase = load_data()
 
-st.dataframe(df_supabase)
-
 # Initialisation des colonnes (gardé comme dans ton code)
 columns = [
     "Date", "Mon_Equipe", "Mon_Classement", "Mon_Champ", "Diff_Gen", "Diff_Att", "Diff_Mil", "Diff_Def", "Diff_Gar",
