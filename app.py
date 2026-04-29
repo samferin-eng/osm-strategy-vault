@@ -2,13 +2,11 @@ import streamlit as st
 import pandas as pd
 from supabase import create_client
 
-st.write(supabase.table("Matchs").select("*").execute())
-
 # --- CONFIGURATION ---
 st.set_page_config(page_title="🐍 Guide OSM", layout="wide")
 st.title("🐍 Guide OSM")
 
-# --- SUPABASE CONNECTION ---
+# --- SUPABASE CONNECTION (DOIT ÊTRE EN HAUT) ---
 url = "https://rbzsbemgcuonwvihuwny.supabase.co"
 key = "TA_CLE_ANON_SUPABASE_ICI"
 
@@ -37,29 +35,35 @@ menu = st.sidebar.radio("Navigation", [
 def afficher_formulaire_complet(prefix):
     st.subheader("1. Contexte & Niveaux")
     f1, f2, f3 = st.columns(3)
+
     with f1:
         mon_e = st.text_input("Mon équipe", "Troyes", key=f"{prefix}_me")
         mon_c = st.number_input("Mon classement", 1, 20, key=f"{prefix}_mc")
         mon_ch = st.text_input("Mon championnat", key=f"{prefix}_mch")
+
     with f2:
         d_gen = st.number_input("Diff. Général", value=0, key=f"{prefix}_dg")
         d_att = st.number_input("Diff. Attaque", value=0, key=f"{prefix}_da")
         d_mil = st.number_input("Diff. Milieu", value=0, key=f"{prefix}_dm")
+
     with f3:
         d_def = st.number_input("Diff. Défense", value=0, key=f"{prefix}_dd")
         d_gar = st.number_input("Diff. Gardien", value=0, key=f"{prefix}_dga")
-        m_camp = st.checkbox("Mon Camp d'entrainement", key=f"{prefix}_mcp")
+        m_camp = st.checkbox("Mon Camp d'entraînement", key=f"{prefix}_mcp")
 
     st.subheader("2. Conditions & Adversaire")
     f4, f5, f6 = st.columns(3)
+
     with f4:
         lieu = st.selectbox("Lieu (D/E)", ["D", "E"], key=f"{prefix}_li")
         stade = st.slider("Niveau Stade", 0, 3, key=f"{prefix}_st")
         arb = st.selectbox("Arbitre", ["V", "B", "J", "O", "R"], key=f"{prefix}_ar")
+
     with f5:
         adv_n = st.text_input("Adversaire", key=f"{prefix}_an")
         adv_co = st.selectbox("Coach", ["Joueur", "IA"], key=f"{prefix}_ac")
         adv_cl = st.number_input("Classement adverse", 1, 20, key=f"{prefix}_acl")
+
     with f6:
         a_dis = st.text_input("Dispositif adverse", key=f"{prefix}_ad")
         a_sty = st.text_input("Style adverse", key=f"{prefix}_as")
@@ -118,7 +122,7 @@ elif menu == "📝 Enregistrer un Match":
     res_fin = st.selectbox("Résultat", ["Victoire","Nul","Défaite"])
     t_pour = st.number_input("Tirs pour")
     t_contre = st.number_input("Tirs contre")
-    poss = st.slider("Possession",0,100)
+    poss = st.slider("Possession", 0, 100)
 
     if st.button("💾 SAUVEGARDER"):
         data = {
@@ -159,7 +163,7 @@ elif menu == "📝 Enregistrer un Match":
         }
 
         insert_match(data)
-        st.success("✅ Match enregistré définitivement")
+        st.success("✅ Match enregistré")
         st.rerun()
 
 # --- ONGLET 3 ---
@@ -170,7 +174,7 @@ elif menu == "📊 Historique":
     st.dataframe(df)
 
     st.subheader("🗑️ Supprimer un match")
-    match_id = st.number_input("ID du match", 1, 10000)
+    match_id = st.number_input("ID du match", 1, 100000)
 
     if st.button("❌ Supprimer"):
         delete_match(match_id)
@@ -180,8 +184,9 @@ elif menu == "📊 Historique":
 # --- ONGLET 4 ---
 else:
     st.header("📖 Guide")
+
     st.write("""
-        - Défensives : 4-5-1, 5-3-2, 5-4-1, 6-3-1
-        - Équilibrées : 4-4-2B, 4-2-3-1, 3-5-2
-        - Attaquantes : 4-3-3, 3-4-3
+    - Défensives : 4-5-1, 5-3-2, 5-4-1, 6-3-1  
+    - Équilibrées : 4-4-2B, 4-2-3-1, 3-5-2  
+    - Attaquantes : 4-3-3, 3-4-3  
     """)
