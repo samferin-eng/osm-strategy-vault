@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 from supabase import create_client
 
+st.write(supabase.table("Matchs").select("*").execute())
+
 # --- CONFIGURATION ---
 st.set_page_config(page_title="🐍 Guide OSM", layout="wide")
 st.title("🐍 Guide OSM")
