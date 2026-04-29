@@ -14,14 +14,14 @@ supabase = create_client(url, key)
 
 # --- DB FUNCTIONS ---
 def insert_match(data):
-    supabase.table("matchs").insert(data).execute()
+    supabase.table("Matchs").insert(data).execute()
 
 def load_data():
-    response = supabase.table("matchs").select("*").execute()
+    response = supabase.table("Matchs").select("*").execute()
     return pd.DataFrame(response.data)
 
 def delete_match(match_id):
-    supabase.table("matchs").delete().eq("id", match_id).execute()
+    supabase.table("Matchs").delete().eq("id", match_id).execute()
 
 # --- MENU ---
 menu = st.sidebar.radio("Navigation", [
