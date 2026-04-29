@@ -1,17 +1,12 @@
 import streamlit as st
 import pandas as pd
 import os
-import requests # Ajouté pour l'envoi Google Forms
-import io       # Ajouté pour la lecture Google Sheets
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="🐍 Guide OSM", layout="wide")
 st.title("🐍 Guide OSM")
 
-# CONFIGURATION GOOGLE (Tes identifiants)
-FORM_ID = "1FAIpQLScRz0wdM-3cV95JkKs3X0BCJQkTeel2QJy4MojN0bCueA3JDw"
-ENTRY_ID = "entry.1264469444"
-SHEET_ID = "1rLlCkWvZqwfuMaRjtzDW2ffxzM7AHtEExnMpgyBHlIw"
+DATA_FILE = "osm_pro_history.csv"
 
 # Initialisation des colonnes
 columns = [
@@ -21,28 +16,10 @@ columns = [
     "Tirs_Pour", "Tirs_Contre", "Possession", "Ma_Tactique", "Mon_Style", "Mon_Pres", "Ma_Ment", "Mon_Temp"
 ]
 
-# --- FONCTION DE LECTURE GOOGLE SHEETS ---
-@st.cache_data(ttl=10)
-def load_data():
-    try:
-        # Lecture du Sheets publié au format CSV
-        url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/pub?output=csv"
-        response = requests.get(url)
-        raw_df = pd.read_csv(io.StringIO(response.text))
-        
-        # Dépliage de la colonne compactée (dernière colonne du Sheets)
-        data_col = raw_df.iloc[:, -1]
-        rows = []
-        for val in data_col.dropna():
-            parts = str(val).split(',')
-            if len(parts) >= 30:
-                rows.append(parts[:34])
-        return pd.DataFrame(rows, columns=columns)
-    except:
-        return pd.DataFrame(columns=columns)
-
-# Chargement du DF depuis Google au lieu du CSV local
-df = load_data()
+if os.path.exists(DATA_FILE):
+    df = pd.read_csv(DATA_FILE)
+else:
+    df = pd.DataFrame(columns=columns)
 
 # Ajout de l'option "Guide & Aide" dans le menu
 menu = st.sidebar.radio("Navigation", ["🧠 Demander une Tactique", "📝 Enregistrer un Match", "📊 Historique", "📖 Guide & Aide"], key="main_menu")
@@ -98,9 +75,6 @@ if menu == "🧠 Demander une Tactique":
         if df.empty:
             st.warning("Base vide.")
         else:
-            # Conversion en numérique pour filtrer proprement
-            df["Mon_Score"] = pd.to_numeric(df["Mon_Score"], errors='coerce')
-            df["Son_Score"] = pd.to_numeric(df["Son_Score"], errors='coerce')
             victoires = df[df['Resultat'] == 'Victoire']
             match_parfait = victoires[(victoires['Adv_Dispo'] == res_search['a_dis']) & (victoires['Type_Coach'] == res_search['adv_co'])]
             
@@ -133,35 +107,29 @@ elif menu == "📝 Enregistrer un Match":
     with s5: t_contre = st.number_input("Ses tirs", 0, 50, 0, key="save_tc")
     with s6: poss = st.slider("Possession %", 0, 100, 50, key="save_poss")
 
-    if st.button("💾 SAUVEGARDER DANS GOOGLE SHEETS"):
-        # Préparation de la ligne compactée
-        data_list = [
-            pd.Timestamp.now().strftime("%d/%m/%Y"), res_save['mon_e'], res_save['mon_c'], res_save['mon_ch'],
-            res_save['d_gen'], res_save['d_att'], res_save['d_mil'], res_save['d_def'], res_save['d_gar'],
-            res_save['m_camp'], res_save['lieu'], res_save['stade'], res_save['arb'], res_save['adv_n'],
-            res_save['adv_co'], res_save['adv_cl'], res_save['a_dis'], res_save['a_sty'], res_save['a_tac'],
-            res_save['a_hj'], res_save['a_mar'], res_save['a_camp'], res_save['enjeu'],
-            m_score, a_score, res_fin, t_pour, t_contre, poss,
-            ma_tac, ma_sty, m_pre, m_men, m_tem
-        ]
-        line_str = ",".join(map(str, data_list))
-        
-        # Envoi via Google Forms
-        try:
-            url_form = f"https://docs.google.com/forms/d/e/{FORM_ID}/formResponse"
-            requests.post(url_form, data={ENTRY_ID: line_str})
-            st.success(f"Match enregistré avec succès dans Google Sheets !")
-            st.cache_data.clear() # Force le rafraîchissement de l'historique
-            st.rerun()
-        except:
-            st.error("Erreur de connexion lors de l'enregistrement.")
+    if st.button("💾 SAUVEGARDER DANS LA MÉMOIRE"):
+        nouvelle_ligne = {
+            "Date": pd.Timestamp.now().strftime("%d/%m/%Y"), "Mon_Equipe": res_save['mon_e'], "Mon_Classement": res_save['mon_c'],
+            "Mon_Champ": res_save['mon_ch'], "Diff_Gen": res_save['d_gen'], "Diff_Att": res_save['d_att'], "Diff_Mil": res_save['d_mil'],
+            "Diff_Def": res_save['d_def'], "Diff_Gar": res_save['d_gar'], "Mon_Camp": res_save['m_camp'], "Lieu": res_save['lieu'],
+            "Niveau_Stade": res_save['stade'], "Arbitre": res_save['arb'], "Adversaire": res_save['adv_n'], "Type_Coach": res_save['adv_co'],
+            "Son_Classement": res_save['adv_cl'], "Adv_Dispo": res_save['a_dis'], "Adv_Style": res_save['a_sty'],
+            "Adv_Tacles": res_save['a_tac'], "Adv_HJ": res_save['a_hj'], "Adv_Marquage": res_save['a_mar'], "Adv_Camp": res_save['a_camp'],
+            "Enjeu": res_save['enjeu'], "Mon_Score": m_score, "Son_Score": a_score, "Resultat": res_fin, 
+            "Tirs_Pour": t_pour, "Tirs_Contre": t_contre, "Possession": poss,
+            "Ma_Tactique": ma_tac, "Mon_Style": ma_sty, "Mon_Pres": m_pre, "Ma_Ment": m_men, "Mon_Temp": m_tem
+        }
+        df = pd.concat([df, pd.DataFrame([nouvelle_ligne])], ignore_index=True)
+        df.to_csv(DATA_FILE, index=False)
+        st.success(f"Match enregistré avec succès !")
+        st.rerun()
 
 # --- ONGLET 3 : HISTORIQUE ---
 elif menu == "📊 Historique":
     st.header("📊 Historique")
     st.dataframe(df)
 
-# --- ONGLET 4 : GUIDE & AIDE ---
+# --- ONGLET 4 : GUIDE & AIDE (Contenu intégral du PDF) ---
 else:
     st.header("📖 Guide Tactique Complet")
     
@@ -206,3 +174,4 @@ else:
     🚀 **Le secret du succès :** La tactique augmente vos probabilités, mais la chance existe. 
     Développez votre équipe quotidiennement via les transferts et l'entraînement pour maximiser vos résultats.
     """)
+    
