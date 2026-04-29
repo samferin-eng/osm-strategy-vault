@@ -135,20 +135,20 @@ else:
     
     with st.expander("📌 ÉTAPE 1 : Les Formations", expanded=True):
         st.write("""
-        - **Défensives (4-5-1, 5-3-2, 5-4-1, 6-3-1) :** Priorité à la compacité. Idéales contre plus fort[cite: 7].
-        - **Équilibrées (4-4-2B, 4-2-3-1, 3-5-2) :** Flexibilité et contrôle du milieu[cite: 8].
-        - **Attaquantes (4-3-3, 3-4-3) :** Présence offensive maximale contre les plus faibles[cite: 9].
-        - **Principe :** Ne jamais forcer une formation hors de son rôle naturel (ex: pas d'attaque agressive en 6-3-1)[cite: 11, 13].
+        - **Défensives (4-5-1, 5-3-2, 5-4-1, 6-3-1) :** Priorité à la compacité. Idéales contre plus fort.
+        - **Équilibrées (4-4-2B, 4-2-3-1, 3-5-2) :** Flexibilité et contrôle du milieu.
+        - **Attaquantes (4-3-3, 3-4-3) :** Présence offensive maximale contre les plus faibles.
+        - **Principe :** Ne jamais forcer une formation hors de son rôle naturel (ex: pas d'attaque agressive en 6-3-1).
         """)
 
     with st.expander("⚽ ÉTAPE 2 & 3 : Plans de jeu & Tactiques de ligne"):
         st.write("""
-        **Plans de jeu compatibles[cite: 17, 22]:**
+        **Plans de jeu compatibles:**
         - **Défensif :** Contre-attaque, Tir à vue, Longue balle.
         - **Équilibré :** Jeu de passe, Contre-attaque, Tir à vue.
         - **Attaquant :** Jeu d'aile, Jeu de passe.
         
-        **Tactiques de ligne[cite: 32, 33, 34]:**
+        **Tactiques de ligne:**
         - **Attaque :** Attaque seulement / Milieu de soutien / Chute profonde.
         - **Milieu :** Pousser en avant / Rester en position / Protéger la défense.
         - **Défense :** Défense profonde / Milieu de soutien / Arrières offensifs.
@@ -156,22 +156,22 @@ else:
 
     with st.expander("⚙️ ÉTAPE 4 à 6 : Curseurs (Pressing, Style, Tempo)"):
         st.write("""
-        - **Pressing :** Élevé pour les plans d'attaque. Bas/Équilibré pour les plans défensifs[cite: 44, 45].
-        - **Style :** Doit correspondre à la formation. Ne jamais jouer défensif avec un 4-3-3[cite: 55, 56].
-        - **Tempo :** Haute vitesse contre les faibles. Lent/Construction pour les formations défensives contre plus fort[cite: 70, 74].
-        - **Règle d'or :** Ne jamais jouer à un rythme élevé contre un meilleur adversaire[cite: 68].
+        - **Pressing :** Élevé pour les plans d'attaque. Bas/Équilibré pour les plans défensifs.
+        - **Style :** Doit correspondre à la formation. Ne jamais jouer défensif avec un 4-3-3.
+        - **Tempo :** Haute vitesse contre les faibles. Lent/Construction pour les formations défensives contre plus fort.
+        - **Règle d'or :** Ne jamais jouer à un rythme élevé contre un meilleur adversaire.
         """)
 
     with st.expander("🛡️ ÉTAPE 7 à 9 : Défense (Tacles, Marquage, Hors-jeu)"):
         st.write("""
-        - **Tacles :** Ajuster selon l'arbitre. Ne jamais jouer 'Téméraire' avec un arbitre strict[cite: 80].
-        - **Marquage Zonal :** En cas de supériorité numérique (plus de défenseurs que d'attaquants)[cite: 94].
-        - **Marquage Individuel :** Si les nombres sont pairs ou pour perturber le rythme[cite: 96].
-        - **Piège Hors-jeu :** Uniquement avec peu de défenseurs (3 ou 4) et pression élevée[cite: 102]. À éviter avec 5 ou 6 défenseurs[cite: 103].
+        - **Tacles :** Ajuster selon l'arbitre. Ne jamais jouer 'Téméraire' avec un arbitre strict.
+        - **Marquage Zonal :** En cas de supériorité numérique (plus de défenseurs que d'attaquants).
+        - **Marquage Individuel :** Si les nombres sont pairs ou pour perturber le rythme.
+        - **Piège Hors-jeu :** Uniquement avec peu de défenseurs (3 ou 4) et pression élevée. À éviter avec 5 ou 6 défenseurs.
         """)
 
     st.info("""
-    🚀 **Le secret du succès :** La tactique augmente vos probabilités, mais la chance existe[cite: 169]. 
-    Développez votre équipe quotidiennement via les transferts et l'entraînement pour maximiser vos résultats[cite: 174, 183].
+    🚀 **Le secret du succès :** La tactique augmente vos probabilités, mais la chance existe. 
+    Développez votre équipe quotidiennement via les transferts et l'entraînement pour maximiser vos résultats.
     """)
     
