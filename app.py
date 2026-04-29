@@ -12,6 +12,8 @@ key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJi
 
 supabase = create_client(url, key)
 
+st.write(nouvelle_ligne)
+
 # --- CHARGEMENT DONNÉES SUPABASE ---
 def load_data():
     res = supabase.table("Matchs").select("*").execute()
