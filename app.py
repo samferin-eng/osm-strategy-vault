@@ -1,14 +1,15 @@
 import streamlit as st
 import pandas as pd
-import os
+from streamlit_gsheets import GSheetsConnection
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="🐍 Guide OSM", layout="wide")
 st.title("🐍 Guide OSM")
 
-DATA_FILE = "osm_pro_history.csv"
+# Connexion au Google Sheets (utilise le lien dans tes Secrets Streamlit)
+conn = st.connection("gsheets", type=GSheetsConnection)
 
-# Initialisation des colonnes complètes
+# Initialisation des colonnes
 columns = [
     "Date", "Mon_Equipe", "Mon_Classement", "Mon_Champ", "Diff_Gen", "Diff_Att", "Diff_Mil", "Diff_Def", "Diff_Gar",
     "Mon_Camp", "Lieu", "Niveau_Stade", "Arbitre", "Adversaire", "Type_Coach", "Son_Classement", "Adv_Dispo",
@@ -16,13 +17,14 @@ columns = [
     "Tirs_Pour", "Tirs_Contre", "Possession", "Ma_Tactique", "Mon_Style", "Mon_Pres", "Ma_Ment", "Mon_Temp"
 ]
 
-# Chargement des données
-if os.path.exists(DATA_FILE):
-    df = pd.read_csv(DATA_FILE)
-else:
+# Chargement des données depuis Google Sheets
+try:
+    df = conn.read(spreadsheet=st.secrets["public_gsheets_url"])
+    df = df.dropna(how="all") # Nettoyage des lignes vides
+except Exception:
     df = pd.DataFrame(columns=columns)
 
-# MENU LATÉRAL (4 options maintenant)
+# MENU LATÉRAL
 menu = st.sidebar.radio("Navigation", ["🧠 Demander une Tactique", "📝 Enregistrer un Match", "📊 Historique", "📖 Guide & Aide"], key="main_menu")
 
 def afficher_formulaire_complet(prefix):
@@ -68,7 +70,7 @@ def afficher_formulaire_complet(prefix):
         "a_tac": a_tac, "a_hj": a_hj, "a_mar": a_mar, "a_camp": a_camp, "enjeu": enjeu
     }
 
-# --- ONGLET 1 : CONSEIL (Logique Intégrale Conservée) ---
+# --- ONGLET 1 : CONSEIL ---
 if menu == "🧠 Demander une Tactique":
     st.header("🧠 Analyseur de Tactique")
     res_search = afficher_formulaire_complet("search")
@@ -108,7 +110,7 @@ elif menu == "📝 Enregistrer un Match":
     with s5: t_contre = st.number_input("Ses tirs", 0, 50, 0, key="save_tc")
     with s6: poss = st.slider("Possession %", 0, 100, 50, key="save_poss")
 
-    if st.button("💾 SAUVEGARDER DANS LA MÉMOIRE"):
+    if st.button("💾 SAUVEGARDER DANS GOOGLE SHEETS"):
         nouvelle_ligne = {
             "Date": pd.Timestamp.now().strftime("%d/%m/%Y"), "Mon_Equipe": res_save['mon_e'], "Mon_Classement": res_save['mon_c'],
             "Mon_Champ": res_save['mon_ch'], "Diff_Gen": res_save['d_gen'], "Diff_Att": res_save['d_att'], "Diff_Mil": res_save['d_mil'],
@@ -120,9 +122,12 @@ elif menu == "📝 Enregistrer un Match":
             "Tirs_Pour": t_pour, "Tirs_Contre": t_contre, "Possession": poss,
             "Ma_Tactique": ma_tac, "Mon_Style": ma_sty, "Mon_Pres": m_pre, "Ma_Ment": m_men, "Mon_Temp": m_tem
         }
-        df = pd.concat([df, pd.DataFrame([nouvelle_ligne])], ignore_index=True)
-        df.to_csv(DATA_FILE, index=False)
-        st.success(f"Match enregistré avec succès !")
+        
+        # Mise à jour du DataFrame et envoi vers Google Sheets
+        updated_df = pd.concat([df, pd.DataFrame([nouvelle_ligne])], ignore_index=True)
+        conn.update(spreadsheet=st.secrets["public_gsheets_url"], data=updated_df)
+        
+        st.success("Match enregistré avec succès dans Google Sheets !")
         st.rerun()
 
 # --- ONGLET 3 : HISTORIQUE ---
@@ -130,7 +135,7 @@ elif menu == "📊 Historique":
     st.header("📊 Historique des matchs")
     st.dataframe(df)
 
-# --- ONGLET 4 : GUIDE & AIDE (Contenu du PDF) ---
+# --- ONGLET 4 : GUIDE & AIDE ---
 elif menu == "📖 Guide & Aide":
     st.header("📖 Guide Tactique Intégral")
     
